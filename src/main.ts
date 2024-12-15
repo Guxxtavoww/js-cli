@@ -1,98 +1,63 @@
-import * as p from '@clack/prompts';
-import { setTimeout } from 'node:timers/promises';
+import {
+  intro,
+  outro,
+  confirm,
+  select,
+  spinner,
+  isCancel,
+  cancel,
+  text,
+} from '@clack/prompts';
 import color from 'picocolors';
-
-function onCancel() {
-  p.cancel('Operation cancelled.');
-  process.exit(0);
-}
+import { setTimeout as sleep } from 'node:timers/promises';
 
 async function main() {
   console.clear();
+  intro(color.inverse(' create-my-app '));
 
-  await setTimeout(1000);
-
-  p.intro(`${color.bgCyan(color.black(' changesets '))}`);
-
-  const changeset = await p.group(
-    {
-      packages: () =>
-        p.groupMultiselect({
-          message: 'Which packages would you like to include?',
-          options: {
-            'changed packages': [
-              { value: '@scope/a', label: 'Scope A' },
-              { value: '@scope/b', label: 'Scope B' },
-              { value: '@scope/c', label: 'Scope C' },
-            ],
-            'unchanged packages': [
-              { value: '@scope/x', label: 'Scope X' },
-              { value: '@scope/y', label: 'Scope Y' },
-              { value: '@scope/z', label: 'Scope Z' },
-            ],
-          },
-        }),
-      major: ({ results }) => {
-        const packages = results.packages ?? [];
-        return p.multiselect({
-          message: `Which packages should have a ${color.red('major')} bump?`,
-          options: packages.map((value, i) => ({ value, label: `${i}` })),
-          required: false,
-        });
-      },
-      minor: ({ results }) => {
-        const packages = results.packages ?? [];
-        const major = Array.isArray(results.major) ? results.major : [];
-        const possiblePackages = packages.filter((pkg) => !major.includes(pkg));
-        if (possiblePackages.length === 0) return;
-        return p.multiselect({
-          message: `Which packages should have a ${color.yellow(
-            'minor'
-          )} bump?`,
-          options: possiblePackages.map((value, i) => ({
-            value,
-            label: `L ${i}`,
-          })),
-          required: false,
-        });
-      },
-      patch: async ({ results }) => {
-        const packages = results.packages ?? [];
-        const major = Array.isArray(results.major) ? results.major : [];
-        const minor = Array.isArray(results.minor) ? results.minor : [];
-        const possiblePackages = packages.filter(
-          (pkg) => !major.includes(pkg) && !minor.includes(pkg)
-        );
-        if (possiblePackages.length === 0) return;
-        let note = possiblePackages.join(color.dim(', '));
-
-        p.log.step(
-          `These packages will have a ${color.green(
-            'patch'
-          )} bump.\n${color.dim(note)}`
-        );
-        return possiblePackages;
-      },
-    },
-    {
-      onCancel,
-    }
-  );
-
-  const message = await p.text({
-    placeholder: 'Summary',
-    message: 'Please enter a summary for this change',
+  const name = await text({
+    message: 'What is your name?',
+    placeholder: 'Anonymous',
   });
 
-  if (p.isCancel(message)) {
-    return onCancel();
+  if (isCancel(name)) {
+    cancel('Operation cancelled');
+    return process.exit(0);
   }
 
-  p.outro(
-    `Changeset added! ${color.underline(
-      color.cyan('.changeset/orange-crabs-sing.md')
-    )}`
-  );
+  const shouldContinue = await confirm({
+    message: 'Do you want to continue?',
+  });
+
+  if (isCancel(shouldContinue)) {
+    cancel('Operation cancelled');
+    return process.exit(0);
+  }
+
+  const projectType = await select({
+    message: 'Pick a project type.',
+    options: [
+      { value: 'ts', label: 'TypeScript' },
+      { value: 'js', label: 'JavaScript' },
+      { value: 'coffee', label: 'CoffeeScript', hint: 'oh no' },
+    ],
+  });
+
+  if (isCancel(projectType)) {
+    cancel('Operation cancelled');
+    return process.exit(0);
+  }
+
+  const s = spinner();
+  s.start('Installing via npm');
+
+  await sleep(3000);
+
+  s.stop('Installed via npm');
+
+  outro("You're all set!");
+
+  await sleep(1000);
 }
 
 main().catch(console.error);
