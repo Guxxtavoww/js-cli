@@ -20,7 +20,7 @@ async function main() {
     placeholder: 'Anonymous',
   });
 
-  if (isCancel(name) || name === '') {
+  if (isCancel(name) || !name?.length) {
     cancel('Operation cancelled');
     return process.exit(0);
   }
